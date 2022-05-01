@@ -24,7 +24,7 @@ body {
     border-radius: 10px;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    background-image: linear-gradient(rgba(255, 255, 255, 0.521) 70%, rgba(0, 0, 0, 0));
+    background-image: linear-gradient(rgba(255, 255, 255, 0.521) 10%, rgba(0, 0, 0, 0));
     box-shadow: 10px 10px 10px 10px rgba(1, 19, 28, 0.442);
     backdrop-filter: blur(6px);
     
