@@ -10,58 +10,9 @@ let winMainDiag = [0, 4, 8];
 let winSecDiag = [2, 4, 6]
 let diagWin;
 
-/* Winner check functions */
-function checkRowColumn (ID) {
-    let col;
-    let row;
-    col = ID % boardSize;
-    row = Math.floor(ID / boardSize);
-    return [row, col]
-}
 
 
-function countUnique(arr) {
-    const counts = {};
-    for (var i = 0; i < arr.length; i++) {
-       counts[arr[i]] = 1 + (counts[arr[i]] || 0);
-    };
-    return counts;
-};
-
-
-function crossedAll(counts) {
-    let counter;
-    let isWinner = false;
-    for (var i = 0; i <= boardSize; i++) {
-        counter = counts[i]
-        if (counter == 3) {isWinner = true}
-    }
-    return isWinner
-}
-
-function containsAll (arrDiag, movesList) {
-    let flags = [];
-    let arr = [...movesList]
-    for (let i=0; i < movesList.length; i++) {
-        move = movesList[i]
-        if (move == arrDiag[0] || move == arrDiag[1] || move == arrDiag[2]) {
-            flags.push(true)}
-    }
-
-    if (flags.length >= 3) {
-        return flags.every ( (element) => {return element == true})
-    } else {return false}
-}
-
-function winOnDiag (movesList) {    
-    let isWinner = [winMainDiag, winSecDiag].map( (arrDiag) => {
-        return containsAll(arrDiag, movesList)
-        })
-    diagWin = isWinner.some( (element) => {return element === true} )
-    return diagWin
-}
-
-
+/* CHECK if player wins */
 function checkForWin (movesList) {
     let cols = [];
     let rows = [];
@@ -91,8 +42,129 @@ function checkForWin (movesList) {
     }
 }
 
+/* Helper functions: */
+/* : marker position in [row, col] coordinates */
+function checkRowColumn (ID) {
+    let col;
+    let row;
+    col = ID % boardSize;
+    row = Math.floor(ID / boardSize);
+    return [row, col]
+}
+
+
+/* : Find unique rows or cols in List of Moves for a player */
+function countUnique(arr) {
+    const counts = {};
+    for (var i = 0; i < arr.length; i++) {
+       counts[arr[i]] = 1 + (counts[arr[i]] || 0);
+    };
+    return counts;
+};
+
+
+/* : Crossed one columns or row? */
+function crossedAll(counts) {
+    let counter;
+    let isWinner = false;
+    for (var i = 0; i <= boardSize; i++) {
+        counter = counts[i]
+        if (counter == 3) {isWinner = true}
+    }
+    return isWinner
+}
+
+/* : Diagonal wins? */
+
+function winOnDiag (movesList) {    
+    let isWinner = [winMainDiag, winSecDiag].map( (arrDiag) => {
+        return containsAll(arrDiag, movesList)
+        })
+    diagWin = isWinner.some( (element) => {return element === true} )
+    return diagWin
+}
+
+/* : Diag wins if moves contain winMainDiag, winSecDiag moves */
+function containsAll (arrDiag, movesList) {
+    let flags = [];
+    let arr = [...movesList]
+    for (let i=0; i < movesList.length; i++) {
+        move = movesList[i]
+        if (move == arrDiag[0] || move == arrDiag[1] || move == arrDiag[2]) {
+            flags.push(true)}
+    }
+
+    if (flags.length >= 3) {
+        return flags.every ( (element) => {return element == true})
+    } else {return false}
+}
+
 
 /* AI MOVES functions */
+function playAI (players, whoPlays) {
+    whoPlays = gameMaster(players, whoPlays)
+    console.log('??did we switch to comp? '+players[whoPlays].name)
+    
+    let futureStepAI = compAI(players, whoPlays)
+    document.getElementById(futureStepAI).removeEventListener('click', nextMove)
+    
+    console.log('!!AI step: -->'+futureStepAI)
+    mark = players[whoPlays].mark
+    /* bb */
+    console.log(futureStepAI)
+    players[whoPlays].moves(futureStepAI)
+    console.log(players[whoPlays].movesList)
+    let div = document.createElement('div')
+    div.innerHTML = mark
+    document.getElementById(futureStepAI).appendChild(div);
+    isItTie (players, whoPlays)
+    isWinner = checkForWin (players[whoPlays].movesList)
+    console.log('\tisWinner: '+isWinner)
+    return [isWinner, whoPlays]
+}
+
+/* Helper functions for AI to move: */
+/* : Analyze moves AI can make */
+function compAI(players, whoPlays) {
+    let AI = players[1]
+    let User = players[0]
+    let board = [...Array(boardSize**2).keys()]
+    let allMoves = User.movesList.concat(AI.movesList)
+    let difference = board.filter(x => !allMoves.includes(String(x)));
+
+    /* check left moves */
+
+    let winnerInOneStep = []
+    if (players[whoPlays].name == 'AI') {
+        console.log('\n--> AI tries its moves: ')
+        for (let i=0; i < difference.length; i++)
+        {   /* move */
+            let imMoves = [];
+            for (var x of players[whoPlays].movesList) {
+                imMoves.push(x);
+            }
+
+            let tryMove = String(difference[i])
+            imMoves.push(tryMove)
+
+            /* check win */
+            isWinner = checkForWin (imMoves)
+            winnerInOneStep.push(isWinner)
+        }
+
+        let flag = winnerInOneStep.some( (element) => {return element === true} ) 
+        if (flag==true) {
+            let bestMoveInd = winnerInOneStep.findIndex((element) => element == true);
+            let bestMove = difference[bestMoveInd]
+            return String(bestMove)
+        } else {
+            let blockOpponentMove = futureMoves (players, whoPlays, difference)
+            return String(blockOpponentMove)
+        }  
+    }
+}
+
+/* : Moves of opponent are checked */
 function futureMoves (players, whoPlays, difference) {
     let winnerInOneStep = []
     for (let i=0; i < difference.length; i++)
@@ -122,74 +194,6 @@ function futureMoves (players, whoPlays, difference) {
 }
 
 
-function compAI(players, whoPlays) {
-    let AI = players[1]
-    let User = players[0]
-    let board = [...Array(boardSize**2).keys()]
-    let allMoves = User.movesList.concat(AI.movesList)
-
-    /*let intersection = gameBoard.filter(x => allMoves.includes(x));*/
-    let difference = board.filter(x => !allMoves.includes(String(x)));
-    console.log('\tcompAI: Left moves on the board: ' + difference)
-    /* check left moves */
-
-    let winnerInOneStep = []
-    if (players[whoPlays].name == 'AI') {
-        console.log('\n--> AI tries its moves: ')
-        for (let i=0; i < difference.length; i++)
-        {   /* move */
-            let imMoves = [];
-            for (var x of players[whoPlays].movesList) {
-                imMoves.push(x);
-            }
-
-            let tryMove = String(difference[i])
-            imMoves.push(tryMove)
-
-            /* check win */
-            isWinner = checkForWin (imMoves)
-            console.log('\t\t--> imisWinner: '+isWinner)
-            winnerInOneStep.push(isWinner)
-        }
-
-        let flag = winnerInOneStep.some( (element) => {return element === true} ) 
-        if (flag==true) {
-            let bestMoveInd = winnerInOneStep.findIndex((element) => element == true);
-            let bestMove = difference[bestMoveInd]
-            console.log('!!!!!!!!!: '+bestMove)
-            return String(bestMove)
-        } else {
-            let blockOpponentMove = futureMoves (players, whoPlays, difference)
-            console.log('!!!!!!BLOCK: '+ blockOpponentMove)
-            return String(blockOpponentMove)
-        }  
-    }
-}
-
-
-function playAI (players, whoPlays) {
-    whoPlays = gameMaster(players, whoPlays)
-    console.log('??did we switch to comp? '+players[whoPlays].name)
-    
-    let futureStepAI = compAI(players, whoPlays)
-    document.getElementById(futureStepAI).removeEventListener('click', nextMove)
-    
-    console.log('!!AI step: -->'+futureStepAI)
-    mark = players[whoPlays].mark
-    /* bb */
-    console.log(futureStepAI)
-    players[whoPlays].moves(futureStepAI)
-    console.log(players[whoPlays].movesList)
-    let div = document.createElement('div')
-    div.innerHTML = mark
-    document.getElementById(futureStepAI).appendChild(div);
-    isItTie (players, whoPlays)
-    isWinner = checkForWin (players[whoPlays].movesList)
-    console.log('\tisWinner: '+isWinner)
-    return [isWinner, whoPlays]
-}
-
-
 
 /* SET PLAYERS and GAME MASTER */
 let Player = function (name, mark) {
@@ -203,7 +207,7 @@ let Player = function (name, mark) {
     return player
 }
 
-
+/* Game master defines who moves next */
 function gameMaster(players, whoPlays) {
     if (players[0].movesList.length == players[1].movesList.length & players[0].movesList.length == 0) {
         if (players[0].mark == 'X') {
@@ -216,6 +220,7 @@ function gameMaster(players, whoPlays) {
     return whoPlays;
 }
 
+/* if a player wins -> announce it */
 function announceWinner (whoPlays, players) {
     let winnerAnn = document.querySelector("#winner");
     winnerAnn.textContent = '';
@@ -226,6 +231,7 @@ function announceWinner (whoPlays, players) {
 
 }
 
+/* if there are no moves left -> announce tie */
 function isItTie (players, whoPlays) {
     let AI = players[1]
     let User = players[0]
@@ -241,6 +247,7 @@ function isItTie (players, whoPlays) {
     }
 }
 
+/* if a tie or win -> finish round -> offer next round */
 function finishGame () {
     let cells = document.querySelectorAll('.cell');
     cells.forEach(element => {
@@ -250,10 +257,9 @@ function finishGame () {
     btn.innerHTML = "Start New Game";
     btn.setAttribute('onclick', 'newGameStarts()')
     document.getElementById('winner').appendChild(btn);
-    /*document.getElementById('newGame').addEventListener('click', newGameStarts())*/
-
 }
 
+/* SET UP a new round */
 function newGameStarts () {
     let winnerAnn = document.querySelector("#winner");
     winnerAnn.textContent = 'Choose:';
@@ -265,35 +271,29 @@ function newGameStarts () {
     let cells = document.querySelector(".board");
     cells.textContent = '';
     cellID = 0
-    setNewRound()
-    
-
+    setNewRound() 
 }
 
+
+/* MAIN FUNCTION that registers moves -> checks for win -> finishes game */
 function nextMove (e) {
-    console.log('nextMove registered! Player: '+whoPlays)
     let ID = e.target.id
     let div = document.createElement('div')
-
     document.getElementById(ID).removeEventListener('click', nextMove)
     
     /* find who playes */
     whoPlays = gameMaster(players, whoPlays)
-    console.log('?switched: '+whoPlays) 
-    console.log('\nTurn of '+players[whoPlays].name)
 
     if (players[whoPlays].name == 'User') {
         /* save the move */
         mark = players[whoPlays].mark
         players[whoPlays].moves(ID)
-        console.log('\tmove recorded in object: '+players[whoPlays].movesList)
         /* place the mark on the board*/
         div.innerHTML = mark
         document.getElementById(ID).appendChild(div);
         isItTie (players, whoPlays)
         /* check for win */
         isWinner = checkForWin (players[whoPlays].movesList)
-        console.log('\tisWinner: '+isWinner)
         if (isWinner == true)
             {announceWinner (whoPlays, players)
             finishGame()}
@@ -307,9 +307,7 @@ function nextMove (e) {
         {announceWinner (whoPlays, players)
         finishGame()}
         }
-
-    }
-    
+    } 
 
 }
 
@@ -333,7 +331,7 @@ function markCell (e) {
 
 
 /* INITIATE NEW GAME */
-
+/* : initiates users, builds board, adds eventListeners */
 function startNewGame (markUser, markComp) {
     /*initiate players */
     players = initUsers (markUser, markComp)
@@ -354,6 +352,7 @@ function startNewGame (markUser, markComp) {
     return players
 }
 
+/* : initiate Users */
 function initUsers (markUser, markComp) {
     let nameUser = 'User'
     let nameComp = 'AI'
@@ -363,6 +362,7 @@ function initUsers (markUser, markComp) {
     return players
 }
 
+/* START new round after choosing 'X' or 'O' for User */
 function setNewRound () {
     document.getElementById("X").onclick = function(){
     
